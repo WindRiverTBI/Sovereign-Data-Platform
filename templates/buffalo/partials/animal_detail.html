@@ -1,0 +1,121 @@
+<div class="grid gap-6 px-6 py-5">
+  <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid content-start gap-2">
+      <h4 class="text-sm font-semibold">Details</h4>
+      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt class="text-muted-foreground">Tribe</dt><dd>{{ animal.tribe }}</dd>
+        {% if animal.is_deceased %}
+          <dt class="text-muted-foreground">Died</dt><dd>{{ animal.date_of_death|date:"Y-m-d" }} ({{ animal.manner_of_death }})</dd>
+        {% endif %}
+        <dt class="text-muted-foreground">Comments</dt><dd class="whitespace-pre-line">{{ animal.comments|default:"—" }}</dd>
+      </dl>
+    </div>
+    <div class="grid content-start gap-2">
+      <h4 class="text-sm font-semibold">Mother / calves</h4>
+      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt class="text-muted-foreground">Mother</dt><dd>{{ animal.mother|default:"—" }}</dd>
+        <dt class="text-muted-foreground">Calves</dt>
+        <dd>{% for calf in animal.calves.all %}{{ calf }}{% if calf.year_born %} ({{ calf.year_born }}){% endif %}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</dd>
+      </dl>
+    </div>
+    <div class="grid content-start gap-2">
+      <h4 class="text-sm font-semibold">Animal documents</h4>
+      {% include "buffalo/partials/attachment_strip.html" with files=animal_files condition_report=None sample=None %}
+    </div>
+  </div>
+
+  <div class="grid gap-2">
+    <h4 class="text-sm font-semibold">Condition history</h4>
+    {% if conditions %}
+      <div class="overflow-x-auto rounded-md border bg-background">
+        <table class="w-full text-sm">
+          <thead class="text-left text-muted-foreground">
+            <tr class="border-b">
+              <th class="px-3 py-2 font-medium">Date</th><th class="px-3 py-2 font-medium">Body score</th>
+              <th class="px-3 py-2 font-medium">Weight (lbs)</th><th class="px-3 py-2 font-medium">Height (in)</th>
+              <th class="px-3 py-2 font-medium">Injury</th><th class="px-3 py-2 font-medium">Comments</th>
+              <th class="px-3 py-2 font-medium">Files</th><th class="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for report, files in conditions %}
+              <tr class="border-b last:border-0 align-top">
+                <td class="px-3 py-2 whitespace-nowrap">{{ report.visit_date|date:"Y-m-d" }}{% if report.point %} <span title="{{ report.point.y|floatformat:5 }}, {{ report.point.x|floatformat:5 }}">📍</span>{% endif %}</td>
+                <td class="px-3 py-2">{{ report.body_score|default:"—" }}</td>
+                <td class="px-3 py-2">{{ report.weight|default:"—" }}</td>
+                <td class="px-3 py-2">{{ report.height|default:"—" }}</td>
+                <td class="px-3 py-2">{% if report.injury %}Yes: {{ report.injury_location }}{% else %}No{% endif %}</td>
+                <td class="px-3 py-2 whitespace-pre-line">{{ report.comments|default:"—" }}</td>
+                <td class="px-3 py-2">{% include "buffalo/partials/attachment_strip.html" with condition_report=report sample=None %}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                  {% if can_edit_tribe %}
+                    <c-button variant="ghost" size="sm" hx-get="{% url 'buffalo:condition_edit' report.pk %}" hx-target="#modal"><c-icon name="pencil" /> Edit</c-button>
+                    <c-button variant="ghost" size="sm" hx-get="{% url 'buffalo:entry_sample' %}?animal={{ animal.pk }}&date={{ report.visit_date|date:'Y-m-d' }}" hx-target="#entry-panel" hx-swap="innerHTML show:#entry-panel:top"><c-icon name="flask-conical" /> Add sample</c-button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-sm text-muted-foreground">No condition reports yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="grid gap-2">
+    <h4 class="text-sm font-semibold">Samples</h4>
+    {% if samples %}
+      <div class="overflow-x-auto rounded-md border bg-background">
+        <table class="w-full text-sm">
+          <thead class="text-left text-muted-foreground">
+            <tr class="border-b">
+              <th class="px-3 py-2 font-medium">Date</th><th class="px-3 py-2 font-medium">Type</th>
+              <th class="px-3 py-2 font-medium">Location</th><th class="px-3 py-2 font-medium">Lab</th>
+              <th class="px-3 py-2 font-medium">Result</th><th class="px-3 py-2 font-medium">Status</th>
+              <th class="px-3 py-2 font-medium">Files</th><th class="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sample, files in samples %}
+              <tr class="border-b last:border-0 align-top">
+                <td class="px-3 py-2 whitespace-nowrap">{{ sample.sample_date|date:"Y-m-d" }}{% if sample.point %} <span title="{{ sample.point.y|floatformat:5 }}, {{ sample.point.x|floatformat:5 }}">📍</span>{% endif %}</td>
+                <td class="px-3 py-2">{{ sample.sample_type }}</td>
+                <td class="px-3 py-2">{{ sample.location|default:"—" }}</td>
+                <td class="px-3 py-2">{{ sample.lab|default:"—" }}</td>
+                <td class="px-3 py-2">{{ sample.result_value|default:"—" }}{% if sample.result_date %} <span class="text-muted-foreground">({{ sample.result_date|date:"Y-m-d" }})</span>{% endif %}</td>
+                <td class="px-3 py-2">{% if sample.is_pending %}<c-badge variant="outline">Pending</c-badge>{% else %}<c-badge variant="secondary">Complete</c-badge>{% endif %}</td>
+                <td class="px-3 py-2">{% include "buffalo/partials/attachment_strip.html" with condition_report=None sample=sample %}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                  {% if can_edit_tribe %}
+                    <c-button variant="ghost" size="sm" hx-get="{% url 'buffalo:sample_edit' sample.pk %}" hx-target="#modal">
+                      <c-icon name="pencil" /> {% if sample.is_pending %}Enter result{% else %}Edit{% endif %}
+                    </c-button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-sm text-muted-foreground">No samples yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2" x-data="{ history: false }">
+    {% if can_edit_tribe %}
+      <c-button variant="outline" size="sm" hx-get="{% url 'buffalo:entry_condition' %}?animal={{ animal.pk }}" hx-target="#entry-panel" hx-swap="innerHTML show:#entry-panel:top">
+        <c-icon name="heart" /> Add condition report
+      </c-button>
+      <c-button variant="outline" size="sm" hx-get="{% url 'buffalo:entry_sample' %}?animal={{ animal.pk }}" hx-target="#entry-panel" hx-swap="innerHTML show:#entry-panel:top">
+        <c-icon name="flask-conical" /> Add sample
+      </c-button>
+    {% endif %}
+    <c-button variant="ghost" size="sm" @click="history = !history"
+              hx-get="{% url 'buffalo:animal_history' animal.pk %}" hx-target="#history-{{ animal.pk }}" hx-trigger="click once">
+      <c-icon name="history" /> <span x-text="history ? 'Hide change history' : 'Show change history'">Show change history</span>
+    </c-button>
+    <div id="history-{{ animal.pk }}" x-show="history" class="w-full"></div>
+  </div>
+</div>

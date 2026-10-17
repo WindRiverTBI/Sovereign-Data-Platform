@@ -1,0 +1,36 @@
+{% comment %}A dialog wrapping one model form. Posting re-renders it (on errors) or clears it (on success).{% endcomment %}
+<c-dialog default_open="true">
+  <c-dialog.content class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+    <c-dialog.header><c-dialog.title>{{ title }}</c-dialog.title></c-dialog.header>
+    <form hx-post="{{ post_url }}" hx-target="#modal" hx-disabled-elt="find button[type=submit]" hx-disinherit="*" class="grid gap-5" novalidate
+          {% if "injury" in form.fields %}x-data="{ injury: {{ form.injury.value|yesno:'true,false' }} }"{% endif %}>
+      {% include "forms/non_field_errors.html" %}
+      <div class="grid gap-5 sm:grid-cols-2">
+        {% for field in form.visible_fields %}
+          {% if field.name == "latitude" %}
+            {% include "forms/point_fields.html" %}
+          {% elif field.name == "longitude" %}
+          {% elif field.name == "injury_location" %}
+            <div x-show="injury" class="sm:col-span-2">{% include "forms/field.html" %}</div>
+          {% else %}
+            {% if field.name == "original_location" or field.name == "location" %}
+              {% include "forms/field.html" with add="location" %}
+            {% elif field.name == "lab" %}
+              {% include "forms/field.html" with add="lab" %}
+            {% elif field.name == "manner_of_death" %}
+              {% include "forms/field.html" with add="manner-of-death" %}
+            {% elif field.name == "comments" or field.widget_type == "checkbox" %}
+              {% include "forms/field.html" with class="sm:col-span-2" %}
+            {% else %}
+              {% include "forms/field.html" %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+      <c-dialog.footer class="gap-2">
+        <c-button type="button" variant="outline" @click="hideDialog()">Cancel</c-button>
+        <c-button type="submit" variant="{% if destructive %}destructive{% else %}default{% endif %}">Save</c-button>
+      </c-dialog.footer>
+    </form>
+  </c-dialog.content>
+</c-dialog>

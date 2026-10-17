@@ -1,0 +1,385 @@
+"""Domain models for buffalo records.
+
+Translated from the `wygisc` schema used by the original ASP.NET
+application. The main structural changes from that schema:
+
+* Surrogate integer keys replace the composite `(animalid, tribe)` keys.
+  Animal IDs were already required to be unique across all tribes, so
+  `Animal.animal_id` is simply unique.
+* The `tblanimalparentage` join table becomes `Animal.mother`.
+* The hand-rolled `tblauditlog` is replaced by django-simple-history.
+* Locations, condition reports, and samples carry PostGIS points.
+"""
+
+import uuid
+from pathlib import PurePath
+from typing import TYPE_CHECKING
+
+from django.conf import settings
+from django.contrib.gis.db import models
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
+from django.utils.text import get_valid_filename, slugify
+from simple_history.models import HistoricalRecords
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from django.db.models.fields.related_descriptors import RelatedManager
+
+# Year-born may be at most this many years in the past.
+MAX_ANIMAL_AGE_YEARS = 25
+
+
+# ── Lookups ───────────────────────────────────────────────────────────────────
+
+
+class Lookup(models.Model):
+    """A named value picked from a dropdown, managed by editors and admins."""
+
+    name = models.CharField(max_length=200, unique=True)
+
+    class Meta:
+        abstract = True
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Tribe(Lookup):
+    name = models.CharField(max_length=100, unique=True)
+
+
+class Location(Lookup):
+    point = models.PointField(srid=4326, null=True, blank=True)
+
+
+class Lab(Lookup):
+    pass
+
+
+class SampleType(Lookup):
+    name = models.CharField(max_length=100, unique=True)
+
+
+class MannerOfDeath(Lookup):
+    class Meta(Lookup.Meta):
+        verbose_name_plural = "manners of death"
+
+
+class Gender(models.TextChoices):
+    FEMALE = "female", "Female"
+    MALE = "male", "Male"
+
+
+# ── Access control ────────────────────────────────────────────────────────────
+
+
+class TribeMembership(models.Model):
+    """Grants a user access to one tribe's records.
+
+    Membership alone grants read access. Replaces the Umbraco member groups
+    (`ShoshoneReader`, `ArapahoeEditor`, `ShoshoneExport`, ...); unlike those,
+    edit and export rights here are scoped to the tribe.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tribe_memberships"
+    )
+    tribe = models.ForeignKey(Tribe, on_delete=models.CASCADE, related_name="memberships")
+    can_edit = models.BooleanField(default=False)
+    can_export = models.BooleanField(default=False)
+
+    if TYPE_CHECKING:
+        tribe_id: int
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "tribe"], name="unique_tribe_membership")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} → {self.tribe}"
+
+
+# ── Records ───────────────────────────────────────────────────────────────────
+
+
+class Tracked(models.Model):
+    """Who created and last changed a record, and when."""
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="+",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class Animal(Tracked):
+    animal_id = models.CharField(
+        "animal ID",
+        max_length=15,
+        unique=True,
+        help_text="AIN: the 15-digit USDA eartag number, or another unique identifier.",
+    )
+    tribe = models.ForeignKey(Tribe, on_delete=models.PROTECT, related_name="animals")
+    intake_date = models.DateField()
+    gender = models.CharField(max_length=10, choices=Gender.choices, blank=True)
+    year_born = models.PositiveSmallIntegerField(null=True, blank=True)
+    original_location = models.ForeignKey(
+        Location, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    mother = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="calves"
+    )
+    date_of_death = models.DateField(null=True, blank=True)
+    manner_of_death = models.ForeignKey(
+        MannerOfDeath, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    comments = models.TextField(blank=True)
+
+    history = HistoricalRecords()
+
+    if TYPE_CHECKING:
+        # Generated by Django; declared for type checkers without a Django plugin.
+        tribe_id: int
+        mother_id: int | None
+        manner_of_death_id: int | None
+        get_gender_display: Callable[[], str]
+        calves: RelatedManager[Animal]
+        condition_reports: RelatedManager[ConditionReport]
+        samples: RelatedManager[Sample]
+        attachments: RelatedManager[Attachment]
+
+    class Meta:
+        ordering = ["animal_id"]
+
+    def __str__(self) -> str:
+        return self.animal_id
+
+    @property
+    def is_deceased(self) -> bool:
+        return self.date_of_death is not None
+
+    def clean(self) -> None:
+        super().clean()
+        self.animal_id = self.animal_id.strip().upper()
+        errors: dict[str, str] = {}
+
+        if self.year_born is not None:
+            this_year = timezone.localdate().year
+            if self.year_born > this_year:
+                errors["year_born"] = "Year born cannot be in the future."
+            elif self.year_born < this_year - MAX_ANIMAL_AGE_YEARS:
+                errors["year_born"] = (
+                    f"Year born cannot be more than {MAX_ANIMAL_AGE_YEARS} years ago "
+                    f"({this_year - MAX_ANIMAL_AGE_YEARS} or later)."
+                )
+
+        mother = self.mother if self.mother_id is not None else None
+        if mother is not None:
+            if self.pk is not None and mother.pk == self.pk:
+                errors["mother"] = "An animal cannot be its own mother."
+            elif self.tribe_id is not None and mother.tribe_id != self.tribe_id:
+                errors["mother"] = "The mother must belong to the same tribe."
+            elif mother.gender != Gender.FEMALE:
+                errors["mother"] = "The mother must be recorded as female."
+
+        if (self.date_of_death is None) != (self.manner_of_death_id is None):
+            errors["date_of_death"] = "Date and manner of death must be recorded together."
+
+        if errors:
+            raise ValidationError(errors)
+
+
+class ObservationPoint(models.Model):
+    """An optional GPS fix for where an observation was made."""
+
+    point = models.PointField(
+        srid=4326,
+        null=True,
+        blank=True,
+        help_text="Where the animal was observed or sampled.",
+    )
+
+    class Meta:
+        abstract = True
+
+
+class ConditionReport(Tracked, ObservationPoint):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name="condition_reports")
+    visit_date = models.DateField()
+    body_score = models.PositiveSmallIntegerField(
+        null=True, blank=True, choices=[(n, str(n)) for n in range(1, 6)]
+    )
+    weight = models.DecimalField(
+        "weight (lbs)",
+        max_digits=6,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(2500)],
+    )
+    height = models.DecimalField(
+        "height (in)",
+        max_digits=5,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(150)],
+    )
+    injury = models.BooleanField("injury present", default=False)
+    injury_location = models.CharField(max_length=500, blank=True)
+    comments = models.TextField(blank=True)
+
+    history = HistoricalRecords()
+
+    if TYPE_CHECKING:
+        animal_id: int
+        attachments: RelatedManager[Attachment]
+
+    class Meta:
+        ordering = ["-visit_date"]
+        constraints = [
+            # Samples are grouped under the condition report taken the same
+            # day, so a second report on one date would be ambiguous.
+            models.UniqueConstraint(
+                fields=["animal", "visit_date"],
+                name="one_condition_report_per_day",
+                violation_error_message=(
+                    "A condition report already exists for this animal on this date. "
+                    "Edit that report instead."
+                ),
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.animal} on {self.visit_date:%Y-%m-%d}"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.injury and not self.injury_location.strip():
+            raise ValidationError(
+                {"injury_location": "Injury location is required when an injury is present."}
+            )
+        if not self.injury:
+            self.injury_location = ""
+
+
+class Sample(Tracked, ObservationPoint):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name="samples")
+    sample_date = models.DateField()
+    sample_type = models.ForeignKey(SampleType, on_delete=models.PROTECT, related_name="+")
+    location = models.ForeignKey(
+        Location, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    lab = models.ForeignKey(Lab, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    result_value = models.CharField(max_length=100, blank=True)
+    result_date = models.DateField(null=True, blank=True)
+    comments = models.TextField(blank=True)
+
+    history = HistoricalRecords()
+
+    if TYPE_CHECKING:
+        animal_id: int
+        attachments: RelatedManager[Attachment]
+
+    class Meta:
+        ordering = ["-sample_date", "sample_type__name"]
+
+    def __str__(self) -> str:
+        return f"{self.sample_type} from {self.animal} on {self.sample_date:%Y-%m-%d}"
+
+    @property
+    def is_pending(self) -> bool:
+        return not self.result_value and self.result_date is None
+
+
+# ── Attachments ───────────────────────────────────────────────────────────────
+
+
+def attachment_upload_to(instance: Attachment, filename: str) -> str:
+    animal = instance.animal
+    safe_name = get_valid_filename(PurePath(filename).name)
+    return (
+        f"attachments/{slugify(animal.tribe.name)}/{slugify(animal.animal_id)}/"
+        f"{uuid.uuid4().hex[:8]}-{safe_name}"
+    )
+
+
+def thumbnail_upload_to(instance: Attachment, filename: str) -> str:
+    return f"thumbnails/{PurePath(instance.file.name or 'thumbnail').with_suffix('.jpg')}"
+
+
+class Attachment(models.Model):
+    """A file attached to an animal, or to one of its condition reports or samples."""
+
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name="attachments")
+    condition_report = models.ForeignKey(
+        ConditionReport,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
+    )
+    sample = models.ForeignKey(
+        Sample, on_delete=models.CASCADE, null=True, blank=True, related_name="attachments"
+    )
+    file = models.FileField(upload_to=attachment_upload_to, max_length=500)
+    thumbnail = models.ImageField(upload_to=thumbnail_upload_to, max_length=500, blank=True)
+    original_filename = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=100, blank=True)
+    size = models.PositiveBigIntegerField()
+    description = models.CharField(max_length=500, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        editable=False,
+        related_name="+",
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
+
+    if TYPE_CHECKING:
+        condition_report_id: int | None
+        sample_id: int | None
+
+    class Meta:
+        ordering = ["uploaded_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(condition_report__isnull=True) | models.Q(sample__isnull=True),
+                name="attachment_has_one_parent_record",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return self.original_filename
+
+    @property
+    def is_image(self) -> bool:
+        return self.content_type.startswith("image/")
+
+    @property
+    def extension(self) -> str:
+        return PurePath(self.original_filename).suffix.lstrip(".").upper()

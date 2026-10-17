@@ -1,0 +1,51 @@
+{% comment %}
+  One animal: its summary row plus a collapsible detail row that is fetched
+  the first time it is opened. Re-rendered (expanded) whenever the server
+  reports a change to this animal.
+{% endcomment %}
+<tbody id="animal-{{ animal.pk }}" x-data="{ open: {{ expanded|yesno:'true,false' }} }"
+       hx-get="{% url 'buffalo:animal_row' animal.pk %}?expanded=1" hx-trigger="animal-updated-{{ animal.pk }} from:body"
+       hx-swap="outerHTML" hx-disinherit="*">
+  <c-table.row class="cursor-pointer" @click="open = !open" x-bind:aria-expanded="open">
+    <c-table.cell class="pl-6">
+      <c-icon name="chevron-right" class="size-4 transition-transform" x-bind:class="open && 'rotate-90'" />
+    </c-table.cell>
+    <c-table.cell class="font-medium">{{ animal.animal_id }}</c-table.cell>
+    <c-table.cell>{{ animal.intake_date|date:"Y-m-d" }}</c-table.cell>
+    <c-table.cell>{{ animal.get_gender_display|default:"—" }}</c-table.cell>
+    <c-table.cell>{{ animal.year_born|default:"—" }}</c-table.cell>
+    <c-table.cell>{{ animal.original_location|default:"—" }}</c-table.cell>
+    <c-table.cell>
+      {% if animal.is_deceased %}
+        <c-badge variant="destructive">Deceased {{ animal.date_of_death|date:"Y-m-d" }}</c-badge>
+      {% else %}
+        <c-badge variant="secondary">Alive</c-badge>
+      {% endif %}
+    </c-table.cell>
+    <c-table.cell class="pr-6 text-right" @click.stop="">
+      {% if can_edit_tribe %}
+        <div class="inline-flex gap-1">
+          <c-button variant="ghost" size="icon" title="Edit animal" hx-get="{% url 'buffalo:animal_edit' animal.pk %}" hx-target="#modal">
+            <c-icon name="pencil" /><span class="sr-only">Edit {{ animal }}</span>
+          </c-button>
+          <c-button variant="ghost" size="icon" title="Add condition report"
+                    hx-get="{% url 'buffalo:entry_condition' %}?animal={{ animal.pk }}" hx-target="#entry-panel" hx-swap="innerHTML show:#entry-panel:top">
+            <c-icon name="heart" /><span class="sr-only">Add condition report for {{ animal }}</span>
+          </c-button>
+          {% if not animal.is_deceased %}
+            <c-button variant="ghost" size="icon" title="Record death" class="text-destructive" hx-get="{% url 'buffalo:animal_death' animal.pk %}" hx-target="#modal">
+              <c-icon name="circle-x" /><span class="sr-only">Record death of {{ animal }}</span>
+            </c-button>
+          {% endif %}
+        </div>
+      {% endif %}
+    </c-table.cell>
+  </c-table.row>
+  <tr x-show="open" x-cloak class="border-b bg-muted/30">
+    <td colspan="8" class="p-0">
+      <div hx-get="{% url 'buffalo:animal_detail' animal.pk %}" hx-trigger="{% if expanded %}load{% else %}intersect once{% endif %}" hx-swap="outerHTML">
+        <p class="px-6 py-4 text-sm text-muted-foreground">Loading…</p>
+      </div>
+    </td>
+  </tr>
+</tbody>

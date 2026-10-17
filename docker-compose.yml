@@ -1,0 +1,62 @@
+# Development environment: PostGIS, the Django dev server (with the Tailwind
+# watcher), and Mailpit to catch outgoing email (password resets).
+#
+#   docker compose up --build
+#   docker compose exec web python manage.py createsuperuser
+#
+# App:     http://localhost:8000
+# Mailpit: http://localhost:8025
+
+services:
+  db:
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_DB: buffalo
+      POSTGRES_USER: buffalo
+      POSTGRES_PASSWORD: buffalo
+    volumes:
+      # PostgreSQL 18+ images keep their data under /var/lib/postgresql/18/.
+      - pgdata:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buffalo -d buffalo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      args:
+        UV_SYNC_ARGS: ""  # include dev dependencies
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py tailwind runserver 0.0.0.0:8000"
+    environment:
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: dev-only-insecure-secret-key
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      DATABASE_URL: postgis://buffalo:buffalo@db:5432/buffalo
+      EMAIL_URL: smtp://mailpit:1025
+    volumes:
+      - .:/app
+      - media:/app/media
+      - tailwind:/opt/tailwind
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    image: axllent/mailpit:v1.31
+    ports:
+      - "8025:8025"
+
+volumes:
+  pgdata:
+  media:
+  tailwind:

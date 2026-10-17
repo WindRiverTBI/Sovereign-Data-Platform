@@ -1,0 +1,44 @@
+{% load static tailwind_cli %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Buffalo Data Entry{% endblock %} | WRTBI</title>
+  <link rel="icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32x32.png' %}">
+  {% tailwind_css %}
+  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  <script src="{% static 'vendor/alpine.min.js' %}" defer></script>
+</head>
+<body class="min-h-screen bg-muted/40 antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  {% block body %}{% endblock %}
+
+  {# Toasts, raised by the server through the HX-Trigger "notify" event. #}
+  <div x-data="{ toasts: [], add(detail) { const id = Date.now() + Math.random(); this.toasts.push({ id, ...detail }); setTimeout(() => this.toasts = this.toasts.filter(t => t.id !== id), 5000); } }"
+       @notify.window="add($event.detail)"
+       class="fixed bottom-4 right-4 z-[60] flex w-80 flex-col gap-2" aria-live="polite">
+    <template x-for="toast in toasts" :key="toast.id">
+      <div class="rounded-lg border bg-background p-4 text-sm shadow-lg"
+           :class="toast.level === 'error' && 'border-destructive/50 text-destructive'"
+           x-text="toast.message"></div>
+    </template>
+  </div>
+
+  <script>
+    document.addEventListener("htmx:afterSwap", (event) => {
+      // Dialogs lock page scrolling while open; clearing a dialog container
+      // (which is how the server closes a dialog) must release it.
+      if (event.detail.target.matches("#modal, #lookup-modal") && !event.detail.target.innerHTML.trim()) {
+        document.body.classList.remove("overflow-hidden");
+      }
+    });
+    document.addEventListener("htmx:responseError", (event) => {
+      const status = event.detail.xhr.status;
+      const message = status === 403
+        ? "You do not have permission to do that."
+        : `Something went wrong (HTTP ${status}). Please try again.`;
+      window.dispatchEvent(new CustomEvent("notify", { detail: { message, level: "error" } }));
+    });
+  </script>
+</body>
+</html>

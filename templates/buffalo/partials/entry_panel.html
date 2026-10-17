@@ -1,0 +1,86 @@
+{% comment %}
+  The Intake / Condition Report / Add Sample tabs. Each tab is fetched from
+  the server, so a form opened from an animal's row arrives pre-filled.
+{% endcomment %}
+<c-card>
+  <c-card.header class="gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <c-card.title class="text-xl">
+      {% if tab == "intake" %}Animal intake{% elif tab == "condition" %}Condition report{% else %}Add sample{% endif %}
+    </c-card.title>
+    <nav class="inline-flex h-9 items-center rounded-lg bg-muted p-1 text-muted-foreground" role="tablist">
+      {% url 'buffalo:entry_intake' as intake_url %}
+      {% url 'buffalo:entry_condition' as condition_url %}
+      {% url 'buffalo:entry_sample' as sample_url %}
+      <button type="button" role="tab" hx-get="{{ intake_url }}" hx-target="#entry-panel"
+              class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-medium {% if tab == 'intake' %}bg-background text-foreground shadow-xs{% endif %}"
+              aria-selected="{% if tab == 'intake' %}true{% else %}false{% endif %}">
+        <c-icon name="plus" class="size-4" /> Intake
+      </button>
+      <button type="button" role="tab" hx-get="{{ condition_url }}" hx-target="#entry-panel"
+              class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-medium {% if tab == 'condition' %}bg-background text-foreground shadow-xs{% endif %}"
+              aria-selected="{% if tab == 'condition' %}true{% else %}false{% endif %}">
+        <c-icon name="heart" class="size-4" /> Condition report
+      </button>
+      <button type="button" role="tab" hx-get="{{ sample_url }}" hx-target="#entry-panel"
+              class="inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-medium {% if tab == 'sample' %}bg-background text-foreground shadow-xs{% endif %}"
+              aria-selected="{% if tab == 'sample' %}true{% else %}false{% endif %}">
+        <c-icon name="flask-conical" class="size-4" /> Add sample
+      </button>
+    </nav>
+  </c-card.header>
+
+  <c-card.content>
+    <form hx-post="{% if tab == 'intake' %}{{ intake_url }}{% elif tab == 'condition' %}{{ condition_url }}{% else %}{{ sample_url }}{% endif %}"
+          hx-target="#entry-panel" hx-encoding="multipart/form-data" hx-disabled-elt="find button[type=submit]" hx-disinherit="*"
+          class="grid gap-6" novalidate
+          {% if tab == "condition" %}x-data="{ injury: {{ form.injury.value|yesno:'true,false' }} }"{% endif %}>
+      {% if saved %}
+        <c-alert><p class="text-sm">{{ saved }}</p></c-alert>
+      {% endif %}
+      {% include "forms/non_field_errors.html" %}
+
+      <div class="grid gap-5 sm:grid-cols-2">
+        {% if tab == "intake" %}
+          {% include "forms/field.html" with field=form.tribe %}
+          {% include "forms/field.html" with field=form.animal_id %}
+          {% include "forms/field.html" with field=form.intake_date %}
+          {% include "forms/field.html" with field=form.gender %}
+          {% include "forms/field.html" with field=form.year_born %}
+          {% include "forms/field.html" with field=form.original_location add="location" %}
+          {% include "forms/field.html" with field=form.mother %}
+          {% include "forms/field.html" with field=form.comments class="sm:col-span-2" %}
+        {% elif tab == "condition" %}
+          {% include "forms/field.html" with field=form.tribe %}
+          {% include "forms/field.html" with field=form.animal %}
+          {% include "forms/field.html" with field=form.visit_date %}
+          {% include "forms/field.html" with field=form.body_score %}
+          {% include "forms/field.html" with field=form.weight %}
+          {% include "forms/field.html" with field=form.height %}
+          {% include "forms/field.html" with field=form.injury class="sm:col-span-2" %}
+          <div x-show="injury" class="sm:col-span-2">
+            {% include "forms/field.html" with field=form.injury_location %}
+          </div>
+          {% include "forms/point_fields.html" %}
+          {% include "forms/field.html" with field=form.comments class="sm:col-span-2" %}
+        {% else %}
+          {% include "forms/field.html" with field=form.tribe %}
+          {% include "forms/field.html" with field=form.animal %}
+          {% include "forms/field.html" with field=form.sample_date %}
+          {% include "forms/field.html" with field=form.sample_type add="sample-type" %}
+          {% include "forms/field.html" with field=form.location add="location" %}
+          {% include "forms/field.html" with field=form.lab add="lab" %}
+          {% include "forms/point_fields.html" %}
+          {% include "forms/field.html" with field=form.comments class="sm:col-span-2" %}
+        {% endif %}
+        {% include "forms/field.html" with field=form.attachment %}
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <c-button type="reset" variant="outline">Reset</c-button>
+        <c-button type="submit">
+          {% if tab == "intake" %}Save intake{% elif tab == "condition" %}Save condition report{% else %}Save sample{% endif %}
+        </c-button>
+      </div>
+    </form>
+  </c-card.content>
+</c-card>

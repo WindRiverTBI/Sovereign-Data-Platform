@@ -1,0 +1,10 @@
+.git
+.jj
+.venv
+.env
+media
+staticfiles
+.django_tailwind_cli
+assets/css/
+**/__pycache__
+.ruff_cache
