@@ -122,7 +122,7 @@ def test_injury_requires_location_and_limits_apply(
         },
     )
     assert "Injury location is required" in response.text
-    assert "less than or equal to 2500" in response.text
+    assert "Weight must be between 0 and 2500 lbs." in response.text
     assert not ConditionReport.objects.exists()
 
 
