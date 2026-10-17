@@ -127,8 +127,8 @@ MAILERS = {
         ),
     }
 }
-DEFAULT_FROM_EMAIL: str = env.str("DEFAULT_FROM_EMAIL", default="wyadapt-info@uwyo.edu")
-SUPPORT_EMAIL: str = env.str("SUPPORT_EMAIL", default="wyadapt-info@uwyo.edu")
+DEFAULT_FROM_EMAIL: str = env.str("DEFAULT_FROM_EMAIL", default="wyadapt-info@windriverbuffalo.org")
+SUPPORT_EMAIL: str = env.str("SUPPORT_EMAIL", default="support@windriverbuffalo.org")
 
 TAILWIND_CLI_VERSION = "4.3.3"
 TAILWIND_CLI_SRC_CSS = "tailwind/source.css"

@@ -211,13 +211,8 @@ class AnimalIntakeForm(StyledFormMixin, AttachmentFieldMixin, forms.ModelForm):
         self.fields["mother"].help_text = "Lists females already recorded for the selected tribe."
 
     def clean_animal_id(self) -> str:
-        animal_id: str = self.cleaned_data["animal_id"].strip().upper()
-        if Animal.objects.filter(animal_id=animal_id).exists():
-            raise ValidationError(
-                f"Animal ID {animal_id} is already registered. "
-                "Animal IDs must be unique across all tribes."
-            )
-        return animal_id
+        # Uniqueness is the model's case-insensitive constraint; this just tidies input.
+        return self.cleaned_data["animal_id"].strip().upper()
 
 
 class AnimalEditForm(StyledFormMixin, forms.ModelForm):
@@ -389,13 +384,7 @@ class AttachmentUploadForm(StyledFormMixin, forms.Form):
 
 
 class LookupForm(StyledFormMixin, forms.ModelForm):
-    def clean_name(self) -> str:
-        name: str = self.cleaned_data["name"].strip()
-        if not name:
-            raise ValidationError("This field is required.")
-        if self._meta.model.objects.filter(name__iexact=name).exists():
-            raise ValidationError(f"“{name}” already exists.")
-        return name
+    """The form field strips names; model constraints reject blanks and duplicates."""
 
 
 class LocationForm(LookupForm, PointFieldsMixin):
