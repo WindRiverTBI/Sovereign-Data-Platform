@@ -1,0 +1,26 @@
+{% comment %}
+  Renders one form field with its label, help text, and errors.
+  Optional: add="<lookup kind>" shows a "+ Add" link that opens the lookup
+  dialog and appends the new value to this field's dropdown.
+  Optional: class="..." on the wrapper (e.g. sm:col-span-2).
+{% endcomment %}
+<div class="grid content-start gap-2 {{ class }}">
+  {% if field.widget_type == "checkbox" %}
+    <label class="flex items-center gap-2 text-sm font-medium">{{ field }} {{ field.label }}</label>
+  {% else %}
+    <div class="flex items-center justify-between">
+      <label for="{{ field.auto_id }}" class="text-sm font-medium leading-none">
+        {{ field.label }}{% if field.field.required %}<span class="text-destructive" aria-hidden="true"> *</span>{% endif %}
+      </label>
+      {% if add %}
+        <button type="button" class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                hx-get="{% url 'buffalo:lookup_add' add %}?target={{ field.auto_id }}" hx-target="#lookup-modal">
+          <c-icon name="plus" class="size-3" /> Add
+        </button>
+      {% endif %}
+    </div>
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<p class="text-xs text-muted-foreground">{{ field.help_text }}</p>{% endif %}
+  {% for error in field.errors %}<p class="text-xs text-destructive">{{ error }}</p>{% endfor %}
+</div>

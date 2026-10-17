@@ -1,0 +1,22 @@
+{% comment %}Latitude/longitude inputs with a "use my location" button (browser geolocation).{% endcomment %}
+<div class="grid gap-4 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
+     x-data="{ locating: false, error: '',
+               locate() {
+                 if (!navigator.geolocation) { this.error = 'This browser cannot report its location.'; return; }
+                 this.locating = true; this.error = '';
+                 navigator.geolocation.getCurrentPosition(
+                   (pos) => {
+                     this.$root.querySelector('[name$=latitude]').value = pos.coords.latitude.toFixed(6);
+                     this.$root.querySelector('[name$=longitude]').value = pos.coords.longitude.toFixed(6);
+                     this.locating = false;
+                   },
+                   (err) => { this.error = err.message; this.locating = false; },
+                   { enableHighAccuracy: true, timeout: 15000 });
+               } }">
+  {% include "forms/field.html" with field=form.latitude %}
+  {% include "forms/field.html" with field=form.longitude %}
+  <c-button type="button" variant="outline" class="sm:mt-6" @click="locate()" x-bind:disabled="locating">
+    <c-icon name="crosshair" /> <span x-text="locating ? 'Locating…' : 'Use my location'">Use my location</span>
+  </c-button>
+  <p class="text-xs text-destructive sm:col-span-3" x-show="error" x-text="error"></p>
+</div>

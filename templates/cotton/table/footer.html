@@ -1,0 +1,13 @@
+<c-vars class=""></c-vars>
+
+<tfoot
+    class="
+    border-t bg-muted/50 font-medium last:[&>tr]:border-b-0
+    {% if class %}
+        {{ class }}
+    {% endif %}
+    "
+    data-slot="table-footer" {{ attrs }}
+>
+    {{ slot }}
+</tfoot>

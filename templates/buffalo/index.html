@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body %}
+<c-sheet>
+  <header class="sticky top-0 z-40 border-b bg-background">
+    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
+      <a href="https://windriverbuffalo.org/" class="flex items-center gap-3">
+        <img src="{% static 'img/wrtbi-round-logo.png' %}" alt="WRTBI" class="size-10">
+        <span class="hidden font-semibold sm:inline">WRTBI Buffalo Data Entry</span>
+      </a>
+      <div class="flex items-center gap-2">
+        <c-sheet.trigger>
+          <c-button variant="outline" size="sm"><c-icon name="info" /> Help</c-button>
+        </c-sheet.trigger>
+        {% if user.is_staff %}
+          <a href="{% url 'admin:index' %}"><c-button variant="ghost" size="sm"><c-icon name="settings" /> Admin</c-button></a>
+        {% endif %}
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <c-button type="submit" variant="ghost" size="sm"><c-icon name="log-out" /> Sign out</c-button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8">
+    {% if can_edit %}
+      <section id="entry-panel" class="scroll-mt-20">
+        {% include "buffalo/partials/entry_panel.html" %}
+      </section>
+    {% endif %}
+
+    <section id="animal-table" class="scroll-mt-20">
+      {% include "buffalo/partials/animal_table.html" with page=table.page tribe=table.tribe tribes=table.tribes page_size=table.page_size page_sizes=table.page_sizes can_edit_tribe=table.can_edit_tribe can_export_tribe=table.can_export_tribe %}
+    </section>
+  </main>
+
+  <c-sheet.content class="w-full max-w-md overflow-y-auto">
+    {% include "buffalo/partials/help.html" %}
+  </c-sheet.content>
+</c-sheet>
+
+<div id="modal"></div>
+<div id="lookup-modal"></div>
+{% endblock %}
