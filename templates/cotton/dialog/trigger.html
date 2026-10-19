@@ -1,0 +1,27 @@
+<c-vars class="" as_child="false"></c-vars>
+
+{% if as_child == "true" %}
+  <div
+    @click.stop="$dispatch('show-dialog')"
+    class="{% if class %}{{ class }}{% endif %}"
+    data-slot="dialog-trigger" {{ attrs }}
+  >
+    {{ slot }}
+  </div>
+{% else %}
+  <button
+    @click.stop="showDialog()"
+    class="
+    inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md
+    border border-input bg-background px-4 py-2 text-sm font-medium shadow-xs
+    transition-colors hover:bg-accent hover:text-accent-foreground
+    focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring
+    disabled:pointer-events-none disabled:opacity-50
+    [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0
+    {% if class %}{{ class }}{% endif %}
+    "
+    data-slot="dialog-trigger" {{ attrs }}
+  >
+    {{ slot }}
+  </button>
+{% endif %}

@@ -1,0 +1,3 @@
+{% if optional %}<option value="">{% if tribe_selected %}None / unknown{% else %}Select a tribe first…{% endif %}</option>
+{% else %}<option value="">{% if tribe_selected %}Select an animal…{% else %}Select a tribe first…{% endif %}</option>{% endif %}
+{% for animal in animals %}<option value="{{ animal.pk }}">{{ animal.animal_id }}</option>{% endfor %}

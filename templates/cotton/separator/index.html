@@ -1,0 +1,20 @@
+<c-vars class="" orientation="horizontal" decorative="true" />
+
+<div
+    class="
+    shrink-0
+    bg-border
+    {% if orientation == 'horizontal' %}
+        h-[1px] w-full
+    {% else %}
+        h-full w-[1px]
+    {% endif %}
+    {% if class %}
+        {{ class }}
+    {% endif %}
+    "
+    role="{% if decorative == 'true' %}none{% else %}separator{% endif %}"
+    data-orientation="{{ orientation }}"
+    {% if decorative != 'true' %}aria-orientation="{{ orientation }}"{% endif %}
+    data-slot="separator" {{ attrs }}
+></div>

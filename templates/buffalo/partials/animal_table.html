@@ -1,0 +1,73 @@
+{% url 'buffalo:animal_table' as table_url %}
+<c-card hx-get="{{ table_url }}?tribe={{ tribe.pk }}&page={{ page.number }}&page_size={{ page_size }}"
+        hx-trigger="animals-changed from:body" hx-target="#animal-table" hx-disinherit="*">
+  <c-card.header class="gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <c-card.title class="flex items-center gap-2 text-xl">
+      Animals
+      {% if tribe %}<c-badge variant="secondary">{{ page.paginator.count }}</c-badge>{% endif %}
+    </c-card.title>
+    <form class="flex flex-wrap items-center gap-2" hx-get="{{ table_url }}" hx-target="#animal-table" hx-trigger="change">
+      <label class="sr-only" for="records-tribe">Tribe</label>
+      <select id="records-tribe" name="tribe" class="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-xs">
+        {% for t in tribes %}
+          <option value="{{ t.pk }}" {% if t == tribe %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+      <label class="sr-only" for="page-size">Rows per page</label>
+      <select id="page-size" name="page_size" class="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-xs">
+        {% for size in page_sizes %}
+          <option value="{{ size }}" {% if size == page_size %}selected{% endif %}>{{ size }} per page</option>
+        {% endfor %}
+      </select>
+      {% if can_export_tribe %}
+        <a href="{% url 'buffalo:export_csv' %}?tribe={{ tribe.pk }}">
+          <c-button type="button" variant="outline" size="sm"><c-icon name="download" /> Export CSV</c-button>
+        </a>
+      {% endif %}
+    </form>
+  </c-card.header>
+
+  <c-card.content class="px-0 pb-0">
+    <c-table>
+      <c-table.header>
+        <c-table.row class="hover:bg-transparent">
+          <c-table.head class="w-8 pl-6"></c-table.head>
+          <c-table.head>Animal ID</c-table.head>
+          <c-table.head>Intake date</c-table.head>
+          <c-table.head>Gender</c-table.head>
+          <c-table.head>Year born</c-table.head>
+          <c-table.head>Location</c-table.head>
+          <c-table.head>Status</c-table.head>
+          <c-table.head class="pr-6 text-right">Actions</c-table.head>
+        </c-table.row>
+      </c-table.header>
+      {% for animal in page %}
+        {% include "buffalo/partials/animal_row.html" with expanded=False %}
+      {% empty %}
+        <tbody>
+          <tr><td colspan="8" class="py-10 text-center text-muted-foreground">
+            {% if tribe %}No animals recorded for {{ tribe }} yet.{% else %}You do not have access to any tribe.{% endif %}
+          </td></tr>
+        </tbody>
+      {% endfor %}
+    </c-table>
+  </c-card.content>
+
+  {% if page.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between border-t px-6 py-3 text-sm">
+      <span class="text-muted-foreground">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      <div class="flex gap-1">
+        {% if page.has_previous %}
+          <c-button variant="outline" size="sm" hx-get="{{ table_url }}?tribe={{ tribe.pk }}&page={{ page.previous_page_number }}&page_size={{ page_size }}" hx-target="#animal-table">
+            <c-icon name="chevron-left" /> Previous
+          </c-button>
+        {% endif %}
+        {% if page.has_next %}
+          <c-button variant="outline" size="sm" hx-get="{{ table_url }}?tribe={{ tribe.pk }}&page={{ page.next_page_number }}&page_size={{ page_size }}" hx-target="#animal-table">
+            Next <c-icon name="chevron-right" />
+          </c-button>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</c-card>

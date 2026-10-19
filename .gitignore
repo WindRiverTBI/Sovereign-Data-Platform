@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+media/
+staticfiles/
+.django_tailwind_cli/
+assets/css/
+.ruff_cache/
+.claude

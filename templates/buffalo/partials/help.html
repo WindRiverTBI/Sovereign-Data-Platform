@@ -1,0 +1,52 @@
+<div class="grid gap-6 text-sm">
+  <h3 class="flex items-center gap-2 text-lg font-semibold"><c-icon name="info" class="size-5" /> How to use</h3>
+
+  <c-alert>
+    <p class="font-medium">Two ways to enter data</p>
+    <p class="mt-1 text-muted-foreground">Use the <strong>Intake</strong>, <strong>Condition report</strong>, and <strong>Add sample</strong> tabs at the top and pick the animal from a dropdown. Or expand an animal's row in the list and choose <strong>Add condition report</strong> or <strong>Add sample</strong> to open the form already filled in for that animal.</p>
+  </c-alert>
+
+  <section class="grid gap-2">
+    <h4 class="font-semibold">Registering a new animal</h4>
+    <ol class="ml-5 list-decimal space-y-1 text-muted-foreground">
+      <li>Open the <strong>Intake</strong> tab and select the <strong>Tribe</strong>.</li>
+      <li>Enter the <strong>Animal ID (AIN)</strong>: the 15-digit USDA eartag number or another unique identifier.</li>
+      <li>Set the <strong>Intake date</strong> (defaults to today). Add gender, year born, and location if known.</li>
+      <li>Select the <strong>Mother</strong> if known; the list shows females already recorded for that tribe.</li>
+      <li>Add comments and, optionally, attach a file. Click <strong>Save intake</strong>.</li>
+    </ol>
+  </section>
+
+  <section class="grid gap-2">
+    <h4 class="font-semibold">Recording a condition report</h4>
+    <ol class="ml-5 list-decimal space-y-1 text-muted-foreground">
+      <li>Open the <strong>Condition report</strong> tab, or use the heart icon on an animal's row.</li>
+      <li>Fill in body score (1–5), weight (lbs), and height (inches) if measured.</li>
+      <li>Tick <strong>Injury present</strong> and describe the location if the animal is injured.</li>
+      <li>Optionally record where the animal was observed. <strong>Use my location</strong> fills in your device's GPS position.</li>
+      <li>Only one condition report can be recorded per animal per day. Edit the existing report instead.</li>
+    </ol>
+  </section>
+
+  <section class="grid gap-2">
+    <h4 class="font-semibold">Adding a sample</h4>
+    <ol class="ml-5 list-decimal space-y-1 text-muted-foreground">
+      <li>Open the <strong>Add sample</strong> tab, or use <strong>Add sample</strong> on a condition report to use that date.</li>
+      <li>Select the sample type, location, and lab. Use <strong>+ Add</strong> if a value you need is not listed.</li>
+      <li>The sample shows as <strong>Pending</strong> until you choose <strong>Enter result</strong> and record the lab result.</li>
+    </ol>
+  </section>
+
+  <section class="grid gap-2">
+    <h4 class="font-semibold">Using the animals list</h4>
+    <ul class="ml-5 list-disc space-y-1 text-muted-foreground">
+      <li><strong>Click a row</strong> to see condition history, samples, mother and calves, and documents.</li>
+      <li><strong>Pencil</strong> edits the animal's details, including its mother. <strong>Red ×</strong> records a death.</li>
+      <li><strong>Attach</strong> adds a photo or document to the animal, a condition report, or a sample. Most file types are accepted except programs and scripts.</li>
+      <li><strong>Show change history</strong> lists every change made to the animal and its records.</li>
+      <li><strong>Export CSV</strong> downloads all of a tribe's data, if you have export access.</li>
+    </ul>
+  </section>
+
+  <p class="rounded-md bg-muted p-4">Need help or found an issue? Email <a class="font-medium text-primary underline" href="mailto:wyadapt-info@uwyo.edu">wyadapt-info@uwyo.edu</a>.</p>
+</div>

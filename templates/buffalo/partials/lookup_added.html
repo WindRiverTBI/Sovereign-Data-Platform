@@ -1,0 +1,2 @@
+{# Appends the new value to the dropdown that asked for it, selected. The empty main body closes the dialog. #}
+<select hx-swap-oob="beforeend:#{{ target }}"><option value="{{ item.pk }}" selected>{{ item }}</option></select>
