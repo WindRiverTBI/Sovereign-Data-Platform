@@ -34,5 +34,12 @@ RUN --mount=type=cache,target=/home/app/.cache/uv,uid=${UID},gid=${GID} \
 
 COPY --chown=app:app . .
 
+# Production serves static files from the image via WhiteNoise's manifest
+# storage, which needs the built Tailwind CSS and collectstatic output. Settings
+# need a secret key and database URL to load, but neither is used here.
+RUN export DJANGO_SECRET_KEY=build-only DATABASE_URL=postgis://build@localhost/build \
+    && python manage.py tailwind build \
+    && python manage.py collectstatic --noinput
+
 EXPOSE 8000
 CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--workers", "3"]
