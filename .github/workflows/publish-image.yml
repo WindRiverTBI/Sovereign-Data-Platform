@@ -1,6 +1,6 @@
-# Goes in the app repo (Sovereign-Data-Platform), not here. Builds the
-# production image on every push to main and pushes it to GHCR as :main and
-# :sha-<commit>. Komodo notices the new :main digest and redeploys.
+# Builds the production image on every push to main and pushes it to GHCR as
+# :main and :sha-<commit>. Komodo, on the server, notices the new :main digest
+# and redeploys (see the WindRiverTBI/infra repo).
 #
 # Forgejo/Gitea Actions run this syntax too, if the repo moves off GitHub.
 
@@ -9,6 +9,8 @@ name: Publish image
 on:
   push:
     branches: [main]
+  # "Run workflow" button on the Actions page. Run it on main to publish :main.
+  workflow_dispatch:
 
 permissions:
   contents: read
