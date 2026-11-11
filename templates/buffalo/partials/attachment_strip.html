@@ -1,0 +1,37 @@
+{% comment %}Files attached to an animal, condition report, or sample, with upload and delete.{% endcomment %}
+<div id="files-{{ animal.pk }}-{% if condition_report %}c{{ condition_report.pk }}{% elif sample %}s{{ sample.pk }}{% else %}a{% endif %}"
+     class="flex flex-wrap items-center gap-2">
+  {% for file in files %}
+    <div class="relative flex max-w-44 items-center gap-2 rounded-md border bg-background p-1 pr-6" title="{{ file.original_filename }} ({{ file.size|filesizeformat }})">
+      <a href="{% url 'buffalo:attachment_download' file.pk %}" target="_blank" class="flex min-w-0 items-center gap-2">
+        {% if file.thumbnail %}
+          <img src="{% url 'buffalo:attachment_thumbnail' file.pk %}" alt="" class="size-8 shrink-0 rounded object-cover" loading="lazy">
+        {% else %}
+          <span class="flex size-8 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-bold text-muted-foreground">{{ file.extension|default:"FILE"|truncatechars:5 }}</span>
+        {% endif %}
+        <span class="truncate text-xs">{{ file.original_filename }}</span>
+      </a>
+      {% if can_edit_tribe %}
+        <button type="button" class="absolute right-1 top-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                hx-delete="{% url 'buffalo:attachment_delete' file.pk %}" hx-confirm="Delete {{ file.original_filename }}?"
+                hx-target="closest div[id^=files-]" hx-swap="outerHTML">
+          <c-icon name="x" class="size-3" /><span class="sr-only">Delete {{ file.original_filename }}</span>
+        </button>
+      {% endif %}
+    </div>
+  {% endfor %}
+  {% if can_edit_tribe %}
+    <form hx-post="{% url 'buffalo:attachment_upload' animal.pk %}" hx-encoding="multipart/form-data" hx-trigger="change"
+          hx-target="closest div[id^=files-]" hx-swap="outerHTML" class="contents">
+      {% if condition_report %}<input type="hidden" name="condition_report" value="{{ condition_report.pk }}">{% endif %}
+      {% if sample %}<input type="hidden" name="sample" value="{{ sample.pk }}">{% endif %}
+      <label class="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-primary hover:bg-accent">
+        <c-icon name="paperclip" class="size-3.5" /> Attach
+        <input type="file" name="file" class="sr-only">
+      </label>
+      <span class="htmx-indicator text-xs text-muted-foreground">Uploading…</span>
+    </form>
+  {% elif not files %}
+    <span class="text-xs text-muted-foreground">—</span>
+  {% endif %}
+</div>

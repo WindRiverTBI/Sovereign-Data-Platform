@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+{% block body %}
+<main class="flex min-h-screen items-center justify-center px-4 py-12">
+  <div class="grid w-full max-w-sm gap-6">
+    <div class="flex flex-col items-center gap-3 text-center">
+      <img src="{% static 'img/wrtbi-round-logo.png' %}" alt="WRTBI" class="size-16">
+      <h1 class="text-xl font-semibold">WRTBI Buffalo Data Management</h1>
+    </div>
+    <c-card>
+      <c-card.header><c-card.title>{% block heading %}{% endblock %}</c-card.title></c-card.header>
+      <c-card.content class="grid gap-4">{% block card %}{% endblock %}</c-card.content>
+    </c-card>
+    <p class="text-center text-xs text-muted-foreground">Wind River Tribal Buffalo Initiative</p>
+  </div>
+</main>
+{% endblock %}

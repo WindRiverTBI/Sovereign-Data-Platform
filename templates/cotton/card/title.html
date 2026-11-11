@@ -1,0 +1,13 @@
+<c-vars class=""></c-vars>
+
+<h3
+    class="
+    font-semibold leading-none tracking-tight
+    {% if class %}
+        {{ class }}
+    {% endif %}
+    "
+    data-slot="card-title" {{ attrs }}
+  >
+    {{ slot }}
+  </h3>

@@ -1,0 +1,5 @@
+{% if form.non_field_errors %}
+  <c-alert variant="destructive">
+    {% for error in form.non_field_errors %}<p class="text-sm">{{ error }}</p>{% endfor %}
+  </c-alert>
+{% endif %}
